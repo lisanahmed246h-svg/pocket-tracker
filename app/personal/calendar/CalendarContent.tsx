@@ -14,30 +14,36 @@ export default function CalendarContent() {
   const searchParams = useSearchParams();
   const monthId = searchParams.get('monthId');
   
-  const { modeData } = useAppData('personal');
+  const { modeData, isLoaded } = useAppData('personal');
   const personalData = modeData as PersonalData;
   
   const [month, setMonth] = useState<MonthData | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    
-    if (monthId && personalData) {
-      let foundMonth: MonthData | null = null;
-      if (personalData.currentMonth?.id === monthId) {
-        foundMonth = personalData.currentMonth;
-      } else {
-        foundMonth = personalData.monthHistory?.find((m) => m.id === monthId) || null;
-      }
-      
-      if (foundMonth) {
-        setMonth(foundMonth);
-      } else {
-        router.push('/personal');
-      }
+    // ডেটা লোড না হলে কিছু করবেন না
+    if (!isLoaded) return;
+
+    // যদি monthId না থাকে, তাহলে হোম পৃষ্ঠায় চলে যান
+    if (!monthId) {
+      router.push('/personal');
+      return;
     }
-  }, [monthId, personalData, router]);
+
+    // মাস খুঁজে বের করা
+    let foundMonth: MonthData | null = null;
+    if (personalData.currentMonth?.id === monthId) {
+      foundMonth = personalData.currentMonth;
+    } else {
+      foundMonth = personalData.monthHistory?.find((m) => m.id === monthId) || null;
+    }
+
+    if (foundMonth) {
+      setMonth(foundMonth);
+    } else {
+      // মাস না পেলে হোম পৃষ্ঠায় ফিরে যান
+      router.push('/personal');
+    }
+  }, [monthId, personalData, router, isLoaded]);
 
   const getNext30Days = () => {
     if (!month) return [];
@@ -57,8 +63,14 @@ export default function CalendarContent() {
     return month.expenses.filter((expense) => expense.date.split('T')[0] === dateStr);
   };
 
-  if (!isMounted || !month) {
-    return <div className="p-8 text-center">লোড হচ্ছে...</div>;
+  // ডেটা লোড হচ্ছে বা মাস পাওয়া যায়নি
+  if (!isLoaded || !month) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">লোড হচ্ছে...</p>
+      </div>
+    );
   }
 
   const next30Days = getNext30Days();
